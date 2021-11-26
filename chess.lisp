@@ -3,10 +3,14 @@
 ;; sbcl --script chess.lisp
 (load "./utils")
 
-(defun piece (p)
-  "Gives the name of the Piece `p`"
+(defun piece-letter (p)
   (let* ((sym-name (symbol-name p))
          (sym-type (subseq sym-name 0 1)))
+    (if (equal sym-type "_") " " sym-type)))
+
+(defun piece (p)
+  "Gives the name of the Piece `p`"
+  (let ((sym-type (piece-letter p)))
     (cond ((equal sym-type "R") 'Rook)
           ((equal sym-type "P") 'Pawn)
           ((equal sym-type "B") 'Bishop)
@@ -40,22 +44,25 @@
           (index-y (- 8 b)))
       (+ (* 8 index-y) index-x))) ',x ,y))
 
-(defun b (str)
-  (format nil (concatenate 'string "~c[40m" str "~c[0m") #\ESC #\ESC)
-(defun w (str)
-  (format nil (concatenate 'string "~c[47m" str "~c[0m") #\ESC #\ESC)
-
-(defun rec (data row col)
-  (let ((next-data (cdr data))
-        (next-row (+ row 1))
-        (next-col (if (= row 7) 0 (+ row 1)))
-        (letter (write-to-string (first data))))
-    (print (b letter))
-    (rec next-data next-row next-col)))
+(defun show-field (f)
+  (let* ((p (first f))
+         (letter (piece-letter p))
+         (b/w (color p))
+         (color-bg-code (cond ((equal b/w 'White) "47")
+                              ((equal b/w 'Black) "40")
+                              (t "106")))
+         (color-code (if (equal (color p) 'White) "30" "37"))
+         (letter-cased (if (equal b/w 'White) letter (string-downcase letter))))
+    (format nil
+      (concatenate
+        'string
+        "~c[" color-bg-code "m"
+        "~c[1m~c[" color-code "m"
+        letter-cased "~c[0m") #\ESC #\ESC #\ESC #\ESC)))
 
 (defun print-chess-board (the-game)
-  (rec the-game 0 0))
-
+    (let ((output (apply #'concatenate 'string (mapcar #'show-field the-game))))
+      (print output)))
 
 (defun play-chess (&optional game-data)
   (let* ((the-game (if game-data game-data (start-game))))
